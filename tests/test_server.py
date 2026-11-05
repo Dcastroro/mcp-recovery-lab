@@ -28,6 +28,21 @@ class RecoveryTests(unittest.TestCase):
         lab = Lab("unavailable")
         self.assertTrue(all(call(lab)["result"]["isError"] for _ in range(3)))
 
+    def test_rate_limit_recovers_after_two_valid_calls(self):
+        lab = Lab("rate-limit")
+        self.assertTrue(call(lab, "unknown")["result"]["isError"])
+        self.assertTrue(call(lab)["result"]["isError"])
+        self.assertTrue(call(lab)["result"]["isError"])
+        self.assertFalse(call(lab)["result"]["isError"])
+
+    def test_stale_read_exposes_a_newer_revision(self):
+        lab = Lab("stale")
+        first = json.loads(call(lab)["result"]["content"][0]["text"])
+        second = json.loads(call(lab)["result"]["content"][0]["text"])
+        self.assertEqual((first["status"], first["revision"]), ("processing", 1))
+        self.assertEqual((second["status"], second["revision"]), ("shipped", 2))
+        self.assertEqual(second, json.loads(call(lab)["result"]["content"][0]["text"]))
+
     def test_healthy_and_not_found(self):
         lab = Lab("healthy")
         self.assertFalse(call(lab)["result"]["isError"])

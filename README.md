@@ -34,12 +34,23 @@ Ask your agent: **“What's the status of order ORD-100? If the tool temporarily
 
 To see a complete exchange without configuring an agent, install the optional official MCP Python client (`python -m pip install mcp`) and run `python examples/client.py`. It discovers the tool, receives the simulated failure, and retries once.
 
+### Run a Pydantic AI agent without an API key
+
+```bash
+python -m pip install "pydantic-ai-slim[mcp]>=2.66,<3"
+python examples/pydantic_agent.py
+```
+
+This example connects a real Pydantic AI `Agent` to the lab through MCP. A scripted `FunctionModel` calls the tool, sees the temporary error and retries once; assertions verify the two calls and final result. The model decisions are deliberately scripted: the example verifies the framework integration and recovery path, **not** how an LLM would behave. No model service is called. To verify every scenario with the official MCP Python client, run `python examples/verify_scenarios.py`.
+
 ## Scenarios
 
 | Scenario | `lookup_order` behavior for `ORD-100` | What to observe |
 | --- | --- | --- |
 | `healthy` | Returns the simulated shipped status. | Normal lookup. |
 | `transient` | First valid lookup fails; subsequent lookups succeed. | Whether the client notices and retries. |
+| `rate-limit` | First two valid lookups return a simulated limit error, then succeed. | Whether retries are bounded; the fixture does not impose a real delay. |
+| `stale` | First lookup reports `processing` at revision 1; later lookups report `shipped` at revision 2. | How an agent handles conflicting observations and revision information. |
 | `unavailable` | Every lookup fails. | Whether the agent reports uncertainty. |
 
 Unknown order IDs return a tool error and do not consume the transient failure. These are simulated outcomes, not a production service or a measure of model quality. The server does not judge an agent's answer, implement transport fault injection, or validate arbitrary MCP servers.

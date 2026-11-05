@@ -21,3 +21,11 @@ jobs:
         run: |
           python -m pip install mcp
           python examples/client.py
+          python examples/verify_scenarios.py
+      - name: Exercise a scripted Pydantic AI agent
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        env:
+          PYDANTIC_AI_NO_BANNER: '1'
+        run: |
+          python -m pip install 'pydantic-ai-slim[mcp]>=2.66,<3'
+          python examples/pydantic_agent.py
