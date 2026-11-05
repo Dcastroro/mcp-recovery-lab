@@ -22,15 +22,21 @@ def scripted_model(messages, _info):
     return ModelResponse(parts=[TextPart("The order status could not be verified.")])
 
 
-async def main():
-    transport = StdioTransport(sys.executable, args=["-m", "mcp_recovery_lab.server", "--scenario", "transient"])
+async def run_scenario(scenario, expected_calls, expected_output):
+    transport = StdioTransport(sys.executable, args=["-m", "mcp_recovery_lab.server", "--scenario", scenario])
     toolset = MCPToolset(Client(transport), max_retries=1)
     agent = Agent(FunctionModel(scripted_model), toolsets=[toolset])
     result = await agent.run("Look up order ORD-100; retry a temporary failure once.")
-    assert result.output == "Order ORD-100 is shipped (simulated data)."
+    assert result.output == expected_output
     calls = [part for message in result.all_messages() for part in message.parts if isinstance(part, ToolCallPart)]
-    assert len(calls) == 2, f"Expected two MCP tool calls, got {len(calls)}"
-    print(f"Pydantic AI: {len(calls)} tool calls; {result.output}")
+    assert len(calls) == expected_calls, f"Expected {expected_calls} MCP tool calls, got {len(calls)}"
+    print(f"Pydantic AI / {scenario}: {len(calls)} tool calls; {result.output}")
+
+
+async def main():
+    await run_scenario("transient", 2, "Order ORD-100 is shipped (simulated data).")
+    await run_scenario("permission-denied", 1, "The order status could not be verified.")
+    await run_scenario("malformed", 1, "The order status could not be verified.")
 
 
 if __name__ == "__main__":
