@@ -30,6 +30,8 @@ class ScriptedModelTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertEqual(response(initial, tool_result(value)).content, "The order status could not be verified.")
         valid = {"order_id": "ORD-100", "status": "shipped"}
+        self.assertEqual(response(initial, ToolReturnPart("other_tool", valid)).content, "The order status could not be verified.")
+        self.assertEqual(response(initial, ToolReturnPart("lookup_order", valid, outcome="failed")).content, "The order status could not be verified.")
         self.assertEqual(response(initial, tool_result(valid)).content, "Order ORD-100 is shipped (simulated data).")
 
 

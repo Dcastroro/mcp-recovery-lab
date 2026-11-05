@@ -15,10 +15,11 @@ def scripted_model(messages, _info):
     results = [part for message in messages for part in message.parts if isinstance(part, (ToolReturnPart, RetryPromptPart))]
     if not results:
         return ModelResponse(parts=[ToolCallPart("lookup_order", {"order_id": "ORD-100"})])
-    if len(results) == 1 and results[-1].content == "Temporary upstream failure. Retry may succeed.":
+    if (len(results) == 1 and results[-1].tool_name == "lookup_order"
+            and results[-1].content == "Temporary upstream failure. Retry may succeed."):
         return ModelResponse(parts=[ToolCallPart("lookup_order", {"order_id": "ORD-100"})])
     latest = results[-1]
-    if (len(results) == 2 and isinstance(latest, ToolReturnPart)
+    if (len(results) == 2 and isinstance(latest, ToolReturnPart) and latest.tool_name == "lookup_order"
             and latest.outcome == "success" and isinstance(latest.content, dict)
             and latest.content.get("order_id") == "ORD-100"
             and latest.content.get("status") == "shipped"):
