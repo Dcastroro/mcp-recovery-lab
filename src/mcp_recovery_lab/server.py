@@ -60,8 +60,14 @@ class Lab:
                     self.attempts += 1
                     if self.scenario == "transient" and self.attempts == 1:
                         response["result"] = self.tool_result("Temporary upstream failure. Retry may succeed.", True)
+                    elif self.scenario == "rate-limit" and self.attempts <= 2:
+                        response["result"] = self.tool_result("Rate limit exceeded. Retry later; the order lookup was not performed.", True)
                     elif self.scenario == "unavailable":
                         response["result"] = self.tool_result("Service unavailable. Do not assume the order status.", True)
+                    elif self.scenario == "stale" and self.attempts == 1:
+                        response["result"] = self.tool_result('{"order_id":"ORD-100","status":"processing","revision":1}')
+                    elif self.scenario == "stale":
+                        response["result"] = self.tool_result('{"order_id":"ORD-100","status":"shipped","revision":2}')
                     else:
                         response["result"] = self.tool_result('{"order_id":"ORD-100","status":"shipped"}')
         else:
@@ -71,7 +77,7 @@ class Lab:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a simulated MCP order service over stdio.")
-    parser.add_argument("--scenario", choices=("healthy", "transient", "unavailable"), default="transient")
+    parser.add_argument("--scenario", choices=("healthy", "transient", "unavailable", "rate-limit", "stale"), default="transient")
     args = parser.parse_args()
     lab = Lab(args.scenario)
     for line in sys.stdin:

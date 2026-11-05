@@ -1,0 +1,37 @@
+"""Run a scripted Pydantic AI agent against the local MCP server, without an LLM."""
+import asyncio
+import sys
+
+from fastmcp import Client
+from fastmcp.client.transports import StdioTransport
+from pydantic_ai import Agent
+from pydantic_ai.mcp import MCPToolset
+from pydantic_ai.messages import ModelResponse, RetryPromptPart, TextPart, ToolCallPart, ToolReturnPart
+from pydantic_ai.models.function import FunctionModel
+
+
+def scripted_model(messages, _info):
+    """Simulate a model: retry once after the known temporary tool error."""
+    results = [part for message in messages for part in message.parts if isinstance(part, (ToolReturnPart, RetryPromptPart))]
+    if not results:
+        return ModelResponse(parts=[ToolCallPart("lookup_order", {"order_id": "ORD-100"})])
+    if len(results) == 1 and "Temporary upstream failure" in str(results[-1].content):
+        return ModelResponse(parts=[ToolCallPart("lookup_order", {"order_id": "ORD-100"})])
+    if len(results) == 2 and "shipped" in str(results[-1].content):
+        return ModelResponse(parts=[TextPart("Order ORD-100 is shipped (simulated data).")])
+    return ModelResponse(parts=[TextPart("The order status could not be verified.")])
+
+
+async def main():
+    transport = StdioTransport(sys.executable, args=["-m", "mcp_recovery_lab.server", "--scenario", "transient"])
+    toolset = MCPToolset(Client(transport), max_retries=1)
+    agent = Agent(FunctionModel(scripted_model), toolsets=[toolset])
+    result = await agent.run("Look up order ORD-100; retry a temporary failure once.")
+    assert result.output == "Order ORD-100 is shipped (simulated data)."
+    calls = [part for message in result.all_messages() for part in message.parts if isinstance(part, ToolCallPart)]
+    assert len(calls) == 2, f"Expected two MCP tool calls, got {len(calls)}"
+    print(f"Pydantic AI: {len(calls)} tool calls; {result.output}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
