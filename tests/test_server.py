@@ -35,6 +35,19 @@ class RecoveryTests(unittest.TestCase):
         self.assertTrue(call(lab)["result"]["isError"])
         self.assertFalse(call(lab)["result"]["isError"])
 
+    def test_permission_denied_stays_denied(self):
+        lab = Lab("permission-denied")
+        for _ in range(3):
+            result = call(lab)["result"]
+            self.assertTrue(result["isError"])
+            self.assertIn("Permission denied", result["content"][0]["text"])
+
+    def test_malformed_payload_is_a_successful_protocol_response(self):
+        result = call(Lab("malformed"))["result"]
+        self.assertFalse(result["isError"])
+        with self.assertRaises(json.JSONDecodeError):
+            json.loads(result["content"][0]["text"])
+
     def test_stale_read_exposes_a_newer_revision(self):
         lab = Lab("stale")
         first = json.loads(call(lab)["result"]["content"][0]["text"])

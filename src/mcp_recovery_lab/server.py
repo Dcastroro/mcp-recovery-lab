@@ -64,6 +64,10 @@ class Lab:
                         response["result"] = self.tool_result("Rate limit exceeded. Retry later; the order lookup was not performed.", True)
                     elif self.scenario == "unavailable":
                         response["result"] = self.tool_result("Service unavailable. Do not assume the order status.", True)
+                    elif self.scenario == "permission-denied":
+                        response["result"] = self.tool_result("Permission denied. The caller is not authorized to view this order.", True)
+                    elif self.scenario == "malformed":
+                        response["result"] = self.tool_result('{"order_id":"ORD-100","status":')
                     elif self.scenario == "stale" and self.attempts == 1:
                         response["result"] = self.tool_result('{"order_id":"ORD-100","status":"processing","revision":1}')
                     elif self.scenario == "stale":
@@ -77,7 +81,7 @@ class Lab:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a simulated MCP order service over stdio.")
-    parser.add_argument("--scenario", choices=("healthy", "transient", "unavailable", "rate-limit", "stale"), default="transient")
+    parser.add_argument("--scenario", choices=("healthy", "transient", "unavailable", "rate-limit", "stale", "permission-denied", "malformed"), default="transient")
     args = parser.parse_args()
     lab = Lab(args.scenario)
     for line in sys.stdin:

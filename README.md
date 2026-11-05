@@ -1,5 +1,7 @@
 # MCP Recovery Lab
 
+[![Tests](https://github.com/Dcastroro/mcp-recovery-lab/actions/workflows/tests.yml/badge.svg)](https://github.com/Dcastroro/mcp-recovery-lab/actions/workflows/tests.yml)
+
 **A tiny local MCP server that fails on purpose, so you can test how your agent recovers.**
 
 An agent's happy path is easy to demo. What happens when a tool returns an error? Does it retry a temporary failure, stop when a service is unavailable, and avoid inventing an answer?
@@ -41,7 +43,15 @@ python -m pip install "pydantic-ai-slim[mcp]>=2.66,<3"
 python examples/pydantic_agent.py
 ```
 
-This example connects a real Pydantic AI `Agent` to the lab through MCP. A scripted `FunctionModel` calls the tool, sees the temporary error and retries once; assertions verify the two calls and final result. The model decisions are deliberately scripted: the example verifies the framework integration and recovery path, **not** how an LLM would behave. No model service is called. To verify every scenario with the official MCP Python client, run `python examples/verify_scenarios.py`.
+This example connects a real Pydantic AI `Agent` to the lab through MCP. A scripted `FunctionModel` retries a temporary error once, and stops without inventing an answer for denied access or malformed data. Assertions verify the call counts and final results. The model decisions are deliberately scripted: the example verifies the framework integration and recovery path, **not** how an LLM would behave. No model service is called. To verify every scenario with the official MCP Python client, run `python examples/verify_scenarios.py`.
+
+Example output:
+
+```text
+Pydantic AI / transient: 2 tool calls; Order ORD-100 is shipped (simulated data).
+Pydantic AI / permission-denied: 1 tool call; The order status could not be verified.
+Pydantic AI / malformed: 1 tool call; The order status could not be verified.
+```
 
 ## Scenarios
 
@@ -52,6 +62,8 @@ This example connects a real Pydantic AI `Agent` to the lab through MCP. A scrip
 | `rate-limit` | First two valid lookups return a simulated limit error, then succeed. | Whether retries are bounded; the fixture does not impose a real delay. |
 | `stale` | First lookup reports `processing` at revision 1; later lookups report `shipped` at revision 2. | How an agent handles conflicting observations and revision information. |
 | `unavailable` | Every lookup fails. | Whether the agent reports uncertainty. |
+| `permission-denied` | Every lookup returns a simulated authorization error. | Whether the agent stops rather than retrying indefinitely or inventing a status. |
+| `malformed` | The MCP call succeeds, but its text contains invalid JSON. | Whether the agent checks data before using it; the MCP response itself remains valid. |
 
 Unknown order IDs return a tool error and do not consume the transient failure. These are simulated outcomes, not a production service or a measure of model quality. The server does not judge an agent's answer, implement transport fault injection, or validate arbitrary MCP servers.
 
