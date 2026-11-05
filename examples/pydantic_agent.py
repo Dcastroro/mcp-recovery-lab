@@ -15,9 +15,13 @@ def scripted_model(messages, _info):
     results = [part for message in messages for part in message.parts if isinstance(part, (ToolReturnPart, RetryPromptPart))]
     if not results:
         return ModelResponse(parts=[ToolCallPart("lookup_order", {"order_id": "ORD-100"})])
-    if len(results) == 1 and "Temporary upstream failure" in str(results[-1].content):
+    if len(results) == 1 and results[-1].content == "Temporary upstream failure. Retry may succeed.":
         return ModelResponse(parts=[ToolCallPart("lookup_order", {"order_id": "ORD-100"})])
-    if len(results) == 2 and "shipped" in str(results[-1].content):
+    latest = results[-1]
+    if (len(results) == 2 and isinstance(latest, ToolReturnPart)
+            and latest.outcome == "success" and isinstance(latest.content, dict)
+            and latest.content.get("order_id") == "ORD-100"
+            and latest.content.get("status") == "shipped"):
         return ModelResponse(parts=[TextPart("Order ORD-100 is shipped (simulated data).")])
     return ModelResponse(parts=[TextPart("The order status could not be verified.")])
 

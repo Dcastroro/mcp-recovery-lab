@@ -43,7 +43,7 @@ python -m pip install "pydantic-ai-slim[mcp]>=2.66,<3"
 python examples/pydantic_agent.py
 ```
 
-This example connects a real Pydantic AI `Agent` to the lab through MCP. A scripted `FunctionModel` retries a temporary error once, and stops without inventing an answer for denied access or malformed data. Assertions verify the call counts and final results. The model decisions are deliberately scripted: the example verifies the framework integration and recovery path, **not** how an LLM would behave. No model service is called. To verify every scenario with the official MCP Python client, run `python examples/verify_scenarios.py`.
+This example connects a real Pydantic AI `Agent` to the lab through MCP. A scripted `FunctionModel` retries a temporary error once, checks the returned order ID and status, and stops without inventing an answer for denied access or malformed data. Assertions verify the call counts and final results. The model decisions are deliberately scripted: the example verifies the framework integration and recovery path, **not** how an LLM would behave. No model service is called. To verify every scenario with the official MCP Python client, run `python examples/verify_scenarios.py`.
 
 Example output:
 
