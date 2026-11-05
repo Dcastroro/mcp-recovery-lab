@@ -30,7 +30,8 @@ async def run_scenario(scenario, expected_calls, expected_output):
     assert result.output == expected_output
     calls = [part for message in result.all_messages() for part in message.parts if isinstance(part, ToolCallPart)]
     assert len(calls) == expected_calls, f"Expected {expected_calls} MCP tool calls, got {len(calls)}"
-    print(f"Pydantic AI / {scenario}: {len(calls)} tool calls; {result.output}")
+    noun = "call" if len(calls) == 1 else "calls"
+    print(f"Pydantic AI / {scenario}: {len(calls)} tool {noun}; {result.output}")
 
 
 async def main():

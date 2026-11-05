@@ -17,6 +17,8 @@ async def check(scenario, expected_errors):
                 result = await session.call_tool("lookup_order", {"order_id": "ORD-100"})
                 observed.append(result)
             assert [result.is_error for result in observed] == expected_errors
+            if scenario == "permission-denied":
+                assert all("Permission denied" in result.content[0].text for result in observed)
             if scenario == "stale":
                 assert [json.loads(result.content[0].text)["revision"] for result in observed] == [1, 2]
             if scenario == "malformed":

@@ -49,8 +49,8 @@ Example output:
 
 ```text
 Pydantic AI / transient: 2 tool calls; Order ORD-100 is shipped (simulated data).
-Pydantic AI / permission-denied: 1 tool calls; The order status could not be verified.
-Pydantic AI / malformed: 1 tool calls; The order status could not be verified.
+Pydantic AI / permission-denied: 1 tool call; The order status could not be verified.
+Pydantic AI / malformed: 1 tool call; The order status could not be verified.
 ```
 
 ## Scenarios
