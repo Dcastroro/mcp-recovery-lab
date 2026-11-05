@@ -61,7 +61,7 @@ class Lab:
                     if self.scenario == "transient" and self.attempts == 1:
                         response["result"] = self.tool_result("Temporary upstream failure. Retry may succeed.", True)
                     elif self.scenario == "rate-limit" and self.attempts <= 2:
-                        response["result"] = self.tool_result("Rate limit exceeded. Retry later; request was not processed.", True)
+                        response["result"] = self.tool_result("Rate limit exceeded. Retry later; the order lookup was not performed.", True)
                     elif self.scenario == "unavailable":
                         response["result"] = self.tool_result("Service unavailable. Do not assume the order status.", True)
                     elif self.scenario == "stale" and self.attempts == 1:

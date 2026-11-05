@@ -32,7 +32,7 @@ The last command runs a **stdio server**, so it waits for an MCP client rather t
 
 Ask your agent: **“What's the status of order ORD-100? If the tool temporarily fails, try it once more.”** The first valid lookup returns a tool error and the next returns `shipped`. Start a new server process to reset the scenario. You can also invoke the server with `python -m mcp_recovery_lab.server --scenario transient` if your client cannot find the console script.
 
-To see a complete exchange without configuring an agent, install the optional official MCP Python client (`python -m pip install mcp`) and run `python examples/client.py`. It discovers the tool, receives the simulated failure, and retries once.
+To see a complete exchange without configuring an agent, install the optional official MCP Python client (`python -m pip install "mcp>=2.3,<3"`) and run `python examples/client.py`. It discovers the tool, receives the simulated failure, and retries once.
 
 ### Run a Pydantic AI agent without an API key
 
