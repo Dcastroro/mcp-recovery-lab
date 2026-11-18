@@ -36,6 +36,8 @@ Ask your agent: **“What's the status of order ORD-100? If the tool temporarily
 
 To see a complete exchange without configuring an agent, install the optional official MCP Python client (`python -m pip install "mcp>=2.3,<3"`) and run `python examples/client.py`. It discovers the tool, receives the simulated failure, and retries once.
 
+Run `python examples/verify_scenarios.py` to check all scenarios over stdio, or add `--scenario rate-limit` to focus on one. The check verifies both the MCP error flag and the expected order status, revision, or error type. A stalled scenario fails after 15 seconds.
+
 ### Run a Pydantic AI agent without an API key
 
 ```bash

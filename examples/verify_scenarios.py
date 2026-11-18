@@ -1,4 +1,5 @@
 """Verify all scenarios through the official MCP client and actual stdio transport."""
+import argparse
 import asyncio
 import json
 import sys
@@ -7,42 +8,72 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 
-async def check(scenario, expected_errors):
+SCENARIOS = {
+    "healthy": [("shipped", None)],
+    "transient": ["temporary", ("shipped", None)],
+    "rate-limit": ["rate", "rate", ("shipped", None)],
+    "unavailable": ["unavailable", "unavailable"],
+    "stale": [("processing", 1), ("shipped", 2)],
+    "permission-denied": ["denied", "denied"],
+    "malformed": ["malformed"],
+}
+
+
+async def check(scenario, expected_steps):
     params = StdioServerParameters(command=sys.executable, args=["-m", "mcp_recovery_lab.server", "--scenario", scenario])
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
-            observed = []
-            for _ in expected_errors:
+            for index, expected in enumerate(expected_steps, start=1):
                 result = await session.call_tool("lookup_order", {"order_id": "ORD-100"})
-                observed.append(result)
-            assert [result.is_error for result in observed] == expected_errors
-            if scenario == "permission-denied":
-                assert all("Permission denied" in result.content[0].text for result in observed)
-            if scenario == "stale":
-                assert [json.loads(result.content[0].text)["revision"] for result in observed] == [1, 2]
-            if scenario == "malformed":
                 try:
-                    json.loads(observed[0].content[0].text)
-                except json.JSONDecodeError:
-                    pass
-                else:
-                    raise AssertionError("Expected invalid JSON in the tool's text content")
-    print(f"{scenario}: {len(expected_errors)} calls verified")
+                    verify_result(result, expected)
+                except AssertionError as error:
+                    raise AssertionError(f"{scenario}, call {index}: {error}") from error
+    print(f"{scenario}: {len(expected_steps)} calls verified")
 
 
-async def main():
-    for scenario, errors in (
-        ("healthy", [False]),
-        ("transient", [True, False]),
-        ("rate-limit", [True, True, False]),
-        ("unavailable", [True, True]),
-        ("stale", [False, False]),
-        ("permission-denied", [True, True]),
-        ("malformed", [False]),
-    ):
-        await check(scenario, errors)
+def verify_result(result, expected):
+    errors = {
+        "temporary": "temporary",
+        "rate": "rate limit",
+        "unavailable": "unavailable",
+        "denied": "permission denied",
+    }
+    if len(result.content) != 1 or result.content[0].type != "text":
+        raise AssertionError("Expected a single text result")
+    text = result.content[0].text
+    if isinstance(expected, str) and expected in errors:
+        if not result.is_error or errors[expected] not in text.lower():
+            raise AssertionError(f"Expected the {expected} tool error")
+        return
+    if result.is_error:
+        raise AssertionError("Expected a successful tool response")
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        if expected == "malformed":
+            return
+        raise AssertionError("Expected valid JSON in the tool text") from None
+    if expected == "malformed":
+        raise AssertionError("Expected invalid JSON in the tool text")
+    status, revision = expected
+    if not isinstance(payload, dict) or (
+        payload.get("order_id"), payload.get("status"), payload.get("revision")
+    ) != ("ORD-100", status, revision):
+        raise AssertionError("Unexpected order ID, status or revision")
+
+
+async def main(scenarios):
+    for scenario in scenarios:
+        try:
+            await asyncio.wait_for(check(scenario, SCENARIOS[scenario]), timeout=15)
+        except asyncio.TimeoutError:
+            raise SystemExit(f"{scenario}: MCP verification timed out after 15 seconds") from None
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--scenario", choices=SCENARIOS, help="Run just this scenario")
+    args = parser.parse_args()
+    asyncio.run(main([args.scenario] if args.scenario else SCENARIOS))
