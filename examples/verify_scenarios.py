@@ -4,10 +4,6 @@ import asyncio
 import json
 import sys
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-
 SCENARIOS = {
     "healthy": [("shipped", None)],
     "transient": ["temporary", ("shipped", None)],
@@ -20,6 +16,9 @@ SCENARIOS = {
 
 
 async def check(scenario, expected_steps):
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
     params = StdioServerParameters(command=sys.executable, args=["-m", "mcp_recovery_lab.server", "--scenario", scenario])
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
@@ -59,9 +58,14 @@ def verify_result(result, expected):
         raise AssertionError("Expected invalid JSON in the tool text")
     status, revision = expected
     if not isinstance(payload, dict) or (
-        payload.get("order_id"), payload.get("status"), payload.get("revision")
-    ) != ("ORD-100", status, revision):
-        raise AssertionError("Unexpected order ID, status or revision")
+        payload.get("order_id"), payload.get("status")
+    ) != ("ORD-100", status):
+        raise AssertionError("Unexpected order ID or status")
+    if revision is None:
+        if "revision" in payload:
+            raise AssertionError("Expected a response without a revision")
+    elif type(payload.get("revision")) is not int or payload["revision"] != revision:
+        raise AssertionError("Expected the exact integer revision")
 
 
 async def main(scenarios):
